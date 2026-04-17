@@ -33,6 +33,9 @@ export class AuthService {
       fullName,
     });
 
+    // Update last login
+    await this.usersService.updateLastLogin((user._id as any).toString());
+
     // Generate token
     const payload = { email: user.email, sub: user._id };
     return {
@@ -59,6 +62,9 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    // Update last login
+    await this.usersService.updateLastLogin((user._id as any).toString());
 
     // Generate token
     const payload = { email: user.email, sub: user._id };

@@ -10,7 +10,7 @@ async function bootstrap() {
   // Enable validation globally
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
-    forbidNonWhitelisted: true,
+    forbidNonWhitelisted: false,
   }));
 
   app.useGlobalFilters(new HttpExceptionFilter());

@@ -13,6 +13,31 @@ export class User {
 
   @Prop({ required: true })
   fullName: string;
+
+  @Prop()
+  avatar?: string;
+
+  // Role
+  @Prop({ default: 'user' })
+  role: 'user' | 'admin';
+
+  // Subscription
+  @Prop({ default: 'free' })
+  plan: 'free' | 'pro' | 'agency';
+
+  // Usage
+  @Prop({ default: 0 })
+  monthlyScanUsed: number;
+
+  @Prop()
+  monthlyResetAt?: Date;
+
+  // Account Status
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop()
+  lastLoginAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
