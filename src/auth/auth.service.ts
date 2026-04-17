@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthData } from './interfaces/auth-data.interface';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -40,11 +41,16 @@ export class AuthService {
     const payload = { email: user.email, sub: user._id };
     return {
       accessToken: this.jwtService.sign(payload),
-      user: {
+      user: new UserResponseDto({
         id: (user._id as any).toString(),
         email: user.email,
         fullName: user.fullName,
-      }
+        avatar: user.avatar,
+        role: user.role,
+        plan: user.plan,
+        isActive: user.isActive,
+        lastLoginAt: user.lastLoginAt,
+      }),
     };
   }
 
@@ -70,11 +76,16 @@ export class AuthService {
     const payload = { email: user.email, sub: user._id };
     return {
       accessToken: this.jwtService.sign(payload),
-      user: {
+      user: new UserResponseDto({
         id: (user._id as any).toString(),
         email: user.email,
         fullName: user.fullName,
-      }
+        avatar: user.avatar,
+        role: user.role,
+        plan: user.plan,
+        isActive: user.isActive,
+        lastLoginAt: user.lastLoginAt,
+      }),
     };
   }
 }
