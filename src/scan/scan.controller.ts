@@ -1,34 +1,50 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, HttpStatus, Query } from '@nestjs/common';
 import { ScanService } from './scan.service';
 import { CreateScanDto } from './dto/create-scan.dto';
-import { UpdateScanDto } from './dto/update-scan.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiResponse } from '../common/interfaces/api-response.interface';
 
-@Controller('scan')
+@Controller('scans')
+@UseGuards(JwtAuthGuard)
 export class ScanController {
   constructor(private readonly scanService: ScanService) {}
 
   @Post()
-  create(@Body() createScanDto: CreateScanDto) {
-    return this.scanService.create(createScanDto);
+  async create(@Request() req: any, @Body() createScanDto: CreateScanDto): Promise<ApiResponse<any>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.create(userId, createScanDto);
+    return {
+      message: 'Scan triggered successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.CREATED,
+    };
   }
 
-  @Get()
-  findAll() {
-    return this.scanService.findAll();
+  @Get('project/:projectId')
+  async findAllByProject(
+    @Request() req: any,
+    @Param('projectId') projectId: string
+  ): Promise<ApiResponse<any[]>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.findAllByProject(userId, projectId);
+    return {
+      message: 'Scans retrieved successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.scanService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateScanDto: UpdateScanDto) {
-    return this.scanService.update(+id, updateScanDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.scanService.remove(+id);
+  async findOne(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<any>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.findOne(userId, id);
+    return {
+      message: 'Scan details retrieved successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 }

@@ -8,5 +8,6 @@ import { Subscription, SubscriptionSchema } from './entities/subscription.entity
   imports: [MongooseModule.forFeature([{ name: Subscription.name, schema: SubscriptionSchema }])],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],
+  exports: [SubscriptionService],
 })
 export class SubscriptionModule {}

@@ -1,26 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
-import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Subscription, SubscriptionDocument } from './entities/subscription.entity';
 
 @Injectable()
 export class SubscriptionService {
-  create(createSubscriptionDto: CreateSubscriptionDto) {
-    return 'This action adds a new subscription';
+  constructor(
+    @InjectModel(Subscription.name) private subscriptionModel: Model<SubscriptionDocument>,
+  ) {}
+
+  async getSubscription(userId: string): Promise<SubscriptionDocument> {
+    const subscription = await this.subscriptionModel.findOne({
+      userId: new Types.ObjectId(userId),
+    }).exec();
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+    return subscription;
   }
 
-  findAll() {
-    return `This action returns all subscription`;
-  }
+  async createInitial(userId: string): Promise<SubscriptionDocument> {
+    const existing = await this.subscriptionModel.findOne({ 
+      userId: new Types.ObjectId(userId) 
+    });
+    
+    if (existing) return existing;
 
-  findOne(id: number) {
-    return `This action returns a #${id} subscription`;
-  }
+    const newSubscription = new this.subscriptionModel({
+      userId: new Types.ObjectId(userId),
+      plan: 'free',
+      status: 'active',
+      startDate: new Date(),
+    });
 
-  update(id: number, updateSubscriptionDto: UpdateSubscriptionDto) {
-    return `This action updates a #${id} subscription`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} subscription`;
+    return newSubscription.save();
   }
 }

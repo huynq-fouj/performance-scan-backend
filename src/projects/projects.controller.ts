@@ -1,34 +1,71 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, HttpStatus } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiResponse } from '../common/interfaces/api-response.interface';
 
 @Controller('projects')
+@UseGuards(JwtAuthGuard)
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  create(@Body() createProjectDto: CreateProjectDto) {
-    return this.projectsService.create(createProjectDto);
+  async create(@Request() req: any, @Body() createProjectDto: CreateProjectDto): Promise<ApiResponse<any>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.projectsService.create(userId, createProjectDto);
+    return {
+      message: 'Project created successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.CREATED,
+    };
   }
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  async findAll(@Request() req: any): Promise<ApiResponse<any[]>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.projectsService.findAll(userId);
+    return {
+      message: 'Projects retrieved successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(+id);
+  async findOne(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<any>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.projectsService.findOne(userId, id);
+    return {
+      message: 'Project retrieved successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto) {
-    return this.projectsService.update(+id, updateProjectDto);
+  async update(@Request() req: any, @Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto): Promise<ApiResponse<any>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.projectsService.update(userId, id, updateProjectDto);
+    return {
+      message: 'Project updated successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(+id);
+  async remove(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<void>> {
+    const userId = req.user._id || req.user.id;
+    await this.projectsService.remove(userId, id);
+    return {
+      message: 'Project deleted successfully',
+      status: 'success',
+      code: HttpStatus.OK,
+    };
   }
 }

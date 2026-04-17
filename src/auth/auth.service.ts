@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthData } from './interfaces/auth-data.interface';
 import { UserResponseDto } from '../users/dto/user-response.dto';
+import { SubscriptionService } from '../subscription/subscription.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthData> {
@@ -36,6 +38,9 @@ export class AuthService {
 
     // Update last login
     await this.usersService.updateLastLogin((user._id as any).toString());
+
+    // Create initial subscription
+    await this.subscriptionService.createInitial((user._id as any).toString());
 
     // Generate token
     const payload = { email: user.email, sub: user._id };
