@@ -28,6 +28,9 @@ export class ScanResponseDto {
   recommendations: string[];
   errorMessage?: string;
 
+  // Populated project info (for global scans list)
+  project?: { id: string; name: string; url: string };
+
   startedAt?: Date;
   completedAt?: Date;
   createdAt: Date;

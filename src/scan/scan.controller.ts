@@ -22,6 +22,34 @@ export class ScanController {
     };
   }
 
+  @Get('all')
+  async findAll(
+    @Request() req: any,
+    @Query('status') status?: string,
+    @Query('projectId') projectId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<ApiResponse<ScanResponseDto[]>> {
+    const userId = req.user._id || req.user.id;
+    const { data, total } = await this.scanService.findAll(userId, {
+      status,
+      projectId,
+      page,
+      limit,
+      startDate,
+      endDate,
+    });
+    return {
+      message: 'All scans retrieved successfully',
+      data,
+      count: total,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
+  }
+
   @Get('project/:projectId')
   async findAllByProject(
     @Request() req: any,

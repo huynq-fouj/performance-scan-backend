@@ -160,4 +160,64 @@ export class ScanService {
     // Also update project to clear lastScanAt if needed, or leave it. We'll just return.
     return this.mapToResponseDto(updated);
   }
+
+  async findAll(
+    userId: string,
+    query: { status?: string; projectId?: string; startDate?: string; endDate?: string; page?: number; limit?: number },
+  ): Promise<{ data: ScanResponseDto[]; total: number }> {
+    const { status, projectId, startDate, endDate, page = 1, limit = 10 } = query;
+    const filter: any = {
+      userId: new Types.ObjectId(userId),
+    };
+
+    if (projectId) {
+      filter.projectId = new Types.ObjectId(projectId);
+    }
+
+    if (status && ['queued', 'running', 'success', 'failed'].includes(status)) {
+      filter.status = status;
+    }
+
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [scans, total] = await Promise.all([
+      this.scanModel
+        .find(filter)
+        .populate('projectId', 'name url')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .exec(),
+      this.scanModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: scans.map((scan) => {
+        const obj = scan.toObject();
+        const dto = this.mapToResponseDto(scan);
+        // Attach populated project info
+        if (obj.projectId && typeof obj.projectId === 'object' && (obj.projectId as any).name) {
+          const proj = obj.projectId as any;
+          dto.project = {
+            id: proj._id.toString(),
+            name: proj.name,
+            url: proj.url,
+          };
+          dto.projectId = proj._id.toString();
+        }
+        return dto;
+      }),
+      total,
+    };
+  }
 }
