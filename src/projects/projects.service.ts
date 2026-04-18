@@ -83,6 +83,7 @@ export class ProjectsService {
       includeSeo: doc.includeSeo,
       includeAccessibility: doc.includeAccessibility,
       includeBestPractices: doc.includeBestPractices,
+      storageItems: doc.storageItems,
       createdAt: (doc as any).createdAt,
       updatedAt: (doc as any).updatedAt,
     };

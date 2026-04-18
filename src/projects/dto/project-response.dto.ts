@@ -15,6 +15,7 @@ export class ProjectResponseDto {
   includeSeo?: boolean;
   includeAccessibility?: boolean;
   includeBestPractices?: boolean;
+  storageItems?: { key: string; value: string }[];
   createdAt: Date;
   updatedAt: Date;
 }

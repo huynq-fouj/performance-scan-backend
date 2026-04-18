@@ -32,4 +32,7 @@ export class CreateProjectDto {
   @IsBoolean()
   @IsOptional()
   includeBestPractices?: boolean;
+
+  @IsOptional()
+  storageItems?: { key: string; value: string }[];
 }
