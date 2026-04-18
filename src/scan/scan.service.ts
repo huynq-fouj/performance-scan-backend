@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Model, Types } from 'mongoose';
 import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
@@ -11,6 +13,7 @@ export class ScanService {
   constructor(
     @InjectModel(Scan.name) private scanModel: Model<ScanDocument>,
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
+    @InjectQueue('lighthouse-scan') private lighthouseQueue: Queue,
   ) {}
 
   private mapToResponseDto(scan: ScanDocument): ScanResponseDto {
@@ -60,6 +63,14 @@ export class ScanService {
     });
 
     const saved = await newScan.save();
+    
+    // Dispatch job to queue
+    await this.lighthouseQueue.add('scan', {
+      scanId: saved._id.toString(),
+      projectId: saved.projectId.toString(),
+      url: project.url,
+    });
+
     return this.mapToResponseDto(saved);
   }
 
