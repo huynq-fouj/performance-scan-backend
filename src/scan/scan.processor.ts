@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { Logger } from '@nestjs/common';
