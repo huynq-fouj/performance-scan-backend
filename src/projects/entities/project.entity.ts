@@ -59,6 +59,9 @@ export class Project {
 
   @Prop()
   lastSeoScore?: number;
+
+  @Prop()
+  lastScreenshot?: string;
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project);

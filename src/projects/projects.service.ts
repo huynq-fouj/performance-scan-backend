@@ -76,6 +76,13 @@ export class ProjectsService {
       autoScanFrequency: doc.autoScanFrequency,
       lastScanAt: doc.lastScanAt,
       lastScore: doc.lastScore,
+      lastAccessibilityScore: doc.lastAccessibilityScore,
+      lastBestPracticesScore: doc.lastBestPracticesScore,
+      lastSeoScore: doc.lastSeoScore,
+      lastScreenshot: doc.lastScreenshot,
+      includeSeo: doc.includeSeo,
+      includeAccessibility: doc.includeAccessibility,
+      includeBestPractices: doc.includeBestPractices,
       createdAt: (doc as any).createdAt,
       updatedAt: (doc as any).updatedAt,
     };

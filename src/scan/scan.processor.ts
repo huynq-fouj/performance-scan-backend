@@ -83,6 +83,7 @@ export class ScanProcessor extends WorkerHost {
       });
 
       const requestCount = networkRequests.length;
+      const screenshot = (lhr.audits['final-screenshot']?.details as any)?.data;
 
       // Update Scan
       const completedAt = new Date();
@@ -111,6 +112,7 @@ export class ScanProcessor extends WorkerHost {
         lastAccessibilityScore: accessibilityScore,
         lastBestPracticesScore: bestPracticesScore,
         lastSeoScore: seoScore,
+        lastScreenshot: screenshot,
       });
 
       this.logger.log(`Successfully completed and saved scan for scanId: ${scanId}`);

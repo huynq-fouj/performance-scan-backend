@@ -8,6 +8,13 @@ export class ProjectResponseDto {
   autoScanFrequency: string;
   lastScanAt?: Date;
   lastScore?: number;
+  lastAccessibilityScore?: number;
+  lastBestPracticesScore?: number;
+  lastSeoScore?: number;
+  lastScreenshot?: string;
+  includeSeo?: boolean;
+  includeAccessibility?: boolean;
+  includeBestPractices?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
