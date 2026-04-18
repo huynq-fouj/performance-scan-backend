@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { CreateScanDto } from './dto/create-scan.dto';
+import { ScanResponseDto } from './dto/scan-response.dto';
 
 @Injectable()
 export class ScanService {
@@ -12,7 +13,33 @@ export class ScanService {
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
   ) {}
 
-  async create(userId: string, createScanDto: CreateScanDto): Promise<ScanDocument> {
+  private mapToResponseDto(scan: ScanDocument): ScanResponseDto {
+    const obj = scan.toObject();
+    return {
+      id: obj._id.toString(),
+      projectId: obj.projectId.toString(),
+      status: obj.status,
+      performanceScore: obj.performanceScore,
+      fcp: obj.fcp,
+      lcp: obj.lcp,
+      cls: obj.cls,
+      tbt: obj.tbt,
+      inp: obj.inp,
+      speedIndex: obj.speedIndex,
+      jsSizeKb: obj.jsSizeKb,
+      cssSizeKb: obj.cssSizeKb,
+      requestCount: obj.requestCount,
+      screenshotUrl: obj.screenshotUrl,
+      recommendations: obj.recommendations || [],
+      errorMessage: obj.errorMessage,
+      startedAt: obj.startedAt,
+      completedAt: obj.completedAt,
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt,
+    };
+  }
+
+  async create(userId: string, createScanDto: CreateScanDto): Promise<ScanResponseDto> {
     const { projectId } = createScanDto;
 
     // Verify project belongs to user
@@ -28,21 +55,33 @@ export class ScanService {
     const newScan = new this.scanModel({
       projectId: new Types.ObjectId(projectId),
       userId: new Types.ObjectId(userId),
-      url: project.url,
       status: 'queued',
+      startedAt: new Date(),
     });
 
-    return newScan.save();
+    const saved = await newScan.save();
+    return this.mapToResponseDto(saved);
   }
 
-  async findAllByProject(userId: string, projectId: string): Promise<ScanDocument[]> {
-    return this.scanModel.find({
+  async findAllByProject(userId: string, projectId: string, status?: string): Promise<ScanResponseDto[]> {
+    const filter: any = {
       projectId: new Types.ObjectId(projectId),
       userId: new Types.ObjectId(userId),
-    }).sort({ createdAt: -1 }).exec();
+    };
+
+    if (status && ['queued', 'running', 'success', 'failed'].includes(status)) {
+      filter.status = status;
+    }
+
+    const scans = await this.scanModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return scans.map(scan => this.mapToResponseDto(scan));
   }
 
-  async findOne(userId: string, id: string): Promise<ScanDocument> {
+  async findOne(userId: string, id: string): Promise<ScanResponseDto> {
     const scan = await this.scanModel.findOne({
       _id: new Types.ObjectId(id),
       userId: new Types.ObjectId(userId),
@@ -51,6 +90,6 @@ export class ScanService {
     if (!scan) {
       throw new NotFoundException('Scan not found or access denied');
     }
-    return scan;
+    return this.mapToResponseDto(scan);
   }
 }
