@@ -44,6 +44,10 @@ export class Project {
   @Prop({ default: true })
   includeBestPractices: boolean;
 
+  // Browser Storage items to inject before scanning
+  @Prop({ type: [{ key: String, value: String }], default: [] })
+  storageItems: { key: string; value: string }[];
+
   // Last scan quick access
   @Prop()
   lastScanAt?: Date;

@@ -95,6 +95,27 @@ export class ScanProcessor extends WorkerHost {
 
       try {
         this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (${device.toUpperCase()} mode)...`);
+
+        // Inject localStorage if project has storageItems configured
+        if (project.storageItems && project.storageItems.length > 0) {
+          this.logger.log(`Injecting ${project.storageItems.length} localStorage items...`);
+          const puppeteer = await import('puppeteer-core');
+          const browser = await puppeteer.default.connect({
+            browserURL: `http://localhost:${chrome.port}`,
+          });
+          const page = await browser.newPage();
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.evaluate((items: { key: string; value: string }[]) => {
+            items.forEach(item => {
+              localStorage.setItem(item.key, item.value);
+            });
+          }, project.storageItems as any);
+          // Close the page but keep the browser — Lighthouse will use the same browser
+          await page.close();
+          browser.disconnect();
+          this.logger.log('localStorage items injected successfully.');
+        }
+
         const runnerResult = await lighthouse(url, flags, config);
         
         this.logger.log(`Lighthouse scan completed, killing chrome...`);
