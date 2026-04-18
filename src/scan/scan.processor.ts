@@ -27,6 +27,13 @@ export class ScanProcessor extends WorkerHost {
         throw new Error('Project not found');
       }
 
+      // 1. Pre-launch check: Has it been cancelled already?
+      const initialScan = await this.scanModel.findById(scanId);
+      if (!initialScan || initialScan.status === 'failed') {
+        this.logger.warn(`Scan ${scanId} was cancelled before starting processor. Aborting.`);
+        return { cancelled: true };
+      }
+
       await this.scanModel.findByIdAndUpdate(scanId, { status: 'running' });
 
       // Dynamically import ESM modules
@@ -47,83 +54,92 @@ export class ScanProcessor extends WorkerHost {
         port: chrome.port,
       };
 
-      this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse with categories: ${categories.join(', ')}...`);
-      const runnerResult = await lighthouse(url, options);
-      
-      this.logger.log(`Lighthouse scan completed, killing chrome...`);
-      await chrome.kill();
+      try {
+        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse...`);
+        const runnerResult = await lighthouse(url, options);
+        
+        this.logger.log(`Lighthouse scan completed, killing chrome...`);
+        await chrome.kill();
 
-      if (!runnerResult) {
-        throw new Error('Lighthouse returned empty result');
-      }
-
-      const lhr = runnerResult.lhr;
-      const fcp = lhr.audits['first-contentful-paint']?.numericValue || 0;
-      const lcp = lhr.audits['largest-contentful-paint']?.numericValue || 0;
-      const cls = lhr.audits['cumulative-layout-shift']?.numericValue || 0;
-      const tbt = lhr.audits['total-blocking-time']?.numericValue || 0;
-      const inp = lhr.audits['interactive']?.numericValue || 0;
-      const speedIndex = lhr.audits['speed-index']?.numericValue || 0;
-      
-      const performanceScore = Math.round((lhr.categories.performance?.score || 0) * 100);
-      const accessibilityScore = lhr.categories.accessibility ? Math.round((lhr.categories.accessibility.score || 0) * 100) : undefined;
-      const bestPracticesScore = lhr.categories['best-practices'] ? Math.round((lhr.categories['best-practices'].score || 0) * 100) : undefined;
-      const seoScore = lhr.categories.seo ? Math.round((lhr.categories.seo.score || 0) * 100) : undefined;
-
-      // JS / CSS sizes approximation from network requests
-      const networkRequests = (lhr.audits['network-requests']?.details as any)?.items || [];
-      let jsSize = 0;
-      let cssSize = 0;
-      networkRequests.forEach((req: any) => {
-        if (req.resourceType === 'Script') {
-          jsSize += req.transferSize || 0;
-        } else if (req.resourceType === 'Stylesheet') {
-          cssSize += req.transferSize || 0;
+        // 2. Post-scan check: Did the user click Stop while we were scanning?
+        const currentScan = await this.scanModel.findById(scanId);
+        if (!currentScan || currentScan.status === 'failed') {
+          this.logger.warn(`Scan ${scanId} was cancelled during execution. Results will NOT be saved.`);
+          return { cancelled: true };
         }
-      });
 
-      const requestCount = networkRequests.length;
-      const screenshot = (lhr.audits['final-screenshot']?.details as any)?.data;
+        if (!runnerResult) {
+          throw new Error('Lighthouse returned empty result');
+        }
 
-      // Update Scan
-      const completedAt = new Date();
-      await this.scanModel.findByIdAndUpdate(scanId, {
-        status: 'success',
-        fcp,
-        lcp,
-        cls,
-        tbt,
-        inp,
-        speedIndex,
-        performanceScore,
-        accessibilityScore,
-        bestPracticesScore,
-        seoScore,
-        jsSizeKb: Math.round(jsSize / 1024),
-        cssSizeKb: Math.round(cssSize / 1024),
-        requestCount,
-        completedAt,
-      });
+        const lhr = runnerResult.lhr;
+        const fcp = lhr.audits['first-contentful-paint']?.numericValue || 0;
+        const lcp = lhr.audits['largest-contentful-paint']?.numericValue || 0;
+        const cls = lhr.audits['cumulative-layout-shift']?.numericValue || 0;
+        const tbt = lhr.audits['total-blocking-time']?.numericValue || 0;
+        const inp = lhr.audits['interactive']?.numericValue || 0;
+        const speedIndex = lhr.audits['speed-index']?.numericValue || 0;
+        
+        const performanceScore = Math.round((lhr.categories.performance?.score || 0) * 100);
+        const accessibilityScore = lhr.categories.accessibility ? Math.round((lhr.categories.accessibility.score || 0) * 100) : undefined;
+        const bestPracticesScore = lhr.categories['best-practices'] ? Math.round((lhr.categories['best-practices'].score || 0) * 100) : undefined;
+        const seoScore = lhr.categories.seo ? Math.round((lhr.categories.seo.score || 0) * 100) : undefined;
 
-      // Update Project
-      await this.projectModel.findByIdAndUpdate(projectId, {
-        lastScanAt: completedAt,
-        lastScore: performanceScore,
-        lastAccessibilityScore: accessibilityScore,
-        lastBestPracticesScore: bestPracticesScore,
-        lastSeoScore: seoScore,
-        lastScreenshot: screenshot,
-      });
+        // JS / CSS sizes approximation
+        const networkRequests = (lhr.audits['network-requests']?.details as any)?.items || [];
+        let jsSize = 0;
+        let cssSize = 0;
+        networkRequests.forEach((req: any) => {
+          if (req.resourceType === 'Script') {
+            jsSize += req.transferSize || 0;
+          } else if (req.resourceType === 'Stylesheet') {
+            cssSize += req.transferSize || 0;
+          }
+        });
 
-      this.logger.log(`Successfully completed and saved scan for scanId: ${scanId}`);
-      return { success: true, performanceScore };
+        const requestCount = networkRequests.length;
+        const screenshot = (lhr.audits['final-screenshot']?.details as any)?.data;
+
+        // Update Scan
+        const completedAt = new Date();
+        await this.scanModel.findByIdAndUpdate(scanId, {
+          status: 'success',
+          fcp, lcp, cls, tbt, inp, speedIndex,
+          performanceScore, accessibilityScore, bestPracticesScore, seoScore,
+          jsSizeKb: Math.round(jsSize / 1024),
+          cssSizeKb: Math.round(cssSize / 1024),
+          requestCount,
+          completedAt,
+        });
+
+        // Update Project
+        await this.projectModel.findByIdAndUpdate(projectId, {
+          lastScanAt: completedAt,
+          lastScore: performanceScore,
+          lastAccessibilityScore: accessibilityScore,
+          lastBestPracticesScore: bestPracticesScore,
+          lastSeoScore: seoScore,
+          lastScreenshot: screenshot,
+        });
+
+        this.logger.log(`Successfully completed and saved scan for scanId: ${scanId}`);
+        return { success: true, performanceScore };
+
+      } catch (err) {
+        await chrome.kill();
+        throw err;
+      }
     } catch (error: any) {
-      this.logger.error(`Failed scan job for scanId: ${scanId}`, error.stack);
-      await this.scanModel.findByIdAndUpdate(scanId, {
-        status: 'failed',
-        errorMessage: error.message || 'Unknown error occurred during Lighthouse scan',
-        completedAt: new Date(),
-      });
+      // Final catch: only update to failed if we haven't already marked it as such
+      const lastCheck = await this.scanModel.findById(scanId);
+      if (lastCheck && lastCheck.status !== 'failed') {
+        this.logger.error(`Failed scan job for scanId: ${scanId}`, error.stack);
+        await this.scanModel.findByIdAndUpdate(scanId, {
+          status: 'failed',
+          errorMessage: error.message || 'Unknown error occurred during Lighthouse scan',
+          completedAt: new Date(),
+        });
+      }
       throw error;
     }
   }
