@@ -4,4 +4,8 @@ export class CreateScanDto {
   @IsMongoId()
   @IsNotEmpty()
   projectId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  device?: 'mobile' | 'desktop';
 }

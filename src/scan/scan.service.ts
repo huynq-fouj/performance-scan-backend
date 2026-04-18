@@ -22,6 +22,7 @@ export class ScanService {
       id: obj._id.toString(),
       projectId: obj.projectId.toString(),
       status: obj.status,
+      device: obj.device,
       performanceScore: obj.performanceScore,
       fcp: obj.fcp,
       lcp: obj.lcp,
@@ -59,6 +60,7 @@ export class ScanService {
       projectId: new Types.ObjectId(projectId),
       userId: new Types.ObjectId(userId),
       status: 'queued',
+      device: createScanDto.device || 'mobile',
       startedAt: new Date(),
     });
 
@@ -69,6 +71,7 @@ export class ScanService {
       scanId: saved._id.toString(),
       projectId: saved.projectId.toString(),
       url: project.url,
+      device: saved.device,
     });
 
     return this.mapToResponseDto(saved);

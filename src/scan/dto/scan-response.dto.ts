@@ -2,6 +2,7 @@ export class ScanResponseDto {
   id: string;
   projectId: string;
   status: 'queued' | 'running' | 'success' | 'failed';
+  device?: 'mobile' | 'desktop';
   performanceScore?: number;
 
   // Core Web Vitals

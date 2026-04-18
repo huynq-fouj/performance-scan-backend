@@ -25,6 +25,9 @@ export class Scan {
   @Prop({ default: 'queued', index: true })
   status: 'queued' | 'running' | 'success' | 'failed';
 
+  @Prop({ default: 'mobile' })
+  device: 'mobile' | 'desktop';
+
   // Main scores
   @Prop()
   performanceScore?: number;

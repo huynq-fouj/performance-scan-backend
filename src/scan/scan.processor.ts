@@ -17,9 +17,9 @@ export class ScanProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ scanId: string; url: string; projectId: string }>): Promise<any> {
-    const { scanId, url, projectId } = job.data;
-    this.logger.log(`Starting scan job for scanId: ${scanId}, url: ${url}`);
+  async process(job: Job<{ scanId: string; url: string; projectId: string; device?: 'mobile' | 'desktop' }>): Promise<any> {
+    const { scanId, url, projectId, device = 'mobile' } = job.data;
+    this.logger.log(`Starting scan job for scanId: ${scanId}, url: ${url}, device: ${device}`);
 
     try {
       const project = await this.projectModel.findById(projectId);
@@ -47,8 +47,6 @@ export class ScanProcessor extends WorkerHost {
       if (project.includeAccessibility) categories.push('accessibility');
       if (project.includeBestPractices) categories.push('best-practices');
 
-      const { default: desktopConfig } = await import('lighthouse/core/config/desktop-config.js');
-
       const flags = {
         logLevel: 'error' as const,
         output: 'json' as const,
@@ -56,33 +54,47 @@ export class ScanProcessor extends WorkerHost {
         port: chrome.port,
       };
 
-      const config = {
-        extends: 'lighthouse:default',
-        settings: {
-          ...desktopConfig.settings,
-          formFactor: 'desktop' as const,
-          screenEmulation: {
-            mobile: false,
-            width: 1350,
-            height: 940,
-            deviceScaleFactor: 1,
-            disabled: false,
-          },
-          emulatedUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-          throttlingMethod: 'simulate' as const,
-          throttling: {
-            rttMs: 40,
-            throughputKbps: 10240,
-            requestLatencyMs: 0,
-            downloadThroughputKbps: 0,
-            uploadThroughputKbps: 0,
-            cpuSlowdownMultiplier: 1,
-          },
-        }
-      };
+      let config: any;
+
+      if (device === 'desktop') {
+        const { default: desktopConfig } = await import('lighthouse/core/config/desktop-config.js');
+        config = {
+          extends: 'lighthouse:default',
+          settings: {
+            ...desktopConfig.settings,
+            formFactor: 'desktop' as const,
+            screenEmulation: {
+              mobile: false,
+              width: 1350,
+              height: 940,
+              deviceScaleFactor: 1,
+              disabled: false,
+            },
+            emulatedUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            throttlingMethod: 'simulate' as const,
+            throttling: {
+              rttMs: 40,
+              throughputKbps: 10240,
+              requestLatencyMs: 0,
+              downloadThroughputKbps: 0,
+              uploadThroughputKbps: 0,
+              cpuSlowdownMultiplier: 1,
+            },
+          }
+        };
+      } else {
+        // Default Mobile Configuration
+        config = {
+          extends: 'lighthouse:default',
+          settings: {
+            formFactor: 'mobile' as const,
+            // Uses standard Lighthouse mobile throttling (Simulated 4G)
+          }
+        };
+      }
 
       try {
-        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (TRUE Desktop mode)...`);
+        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (${device.toUpperCase()} mode)...`);
         const runnerResult = await lighthouse(url, flags, config);
         
         this.logger.log(`Lighthouse scan completed, killing chrome...`);
