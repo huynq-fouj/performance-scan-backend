@@ -118,6 +118,12 @@ export class ScanProcessor extends WorkerHost {
         const tbt = lhr.audits['total-blocking-time']?.numericValue || 0;
         const inp = lhr.audits['interactive']?.numericValue || 0;
         const speedIndex = lhr.audits['speed-index']?.numericValue || 0;
+
+        const fcpScore = Math.round((lhr.audits['first-contentful-paint']?.score || 0) * 100);
+        const lcpScore = Math.round((lhr.audits['largest-contentful-paint']?.score || 0) * 100);
+        const clsScore = Math.round((lhr.audits['cumulative-layout-shift']?.score || 0) * 100);
+        const tbtScore = Math.round((lhr.audits['total-blocking-time']?.score || 0) * 100);
+        const speedIndexScore = Math.round((lhr.audits['speed-index']?.score || 0) * 100);
         
         const performanceScore = Math.round((lhr.categories.performance?.score || 0) * 100);
         const accessibilityScore = lhr.categories.accessibility ? Math.round((lhr.categories.accessibility.score || 0) * 100) : undefined;
@@ -144,6 +150,7 @@ export class ScanProcessor extends WorkerHost {
         await this.scanModel.findByIdAndUpdate(scanId, {
           status: 'success',
           fcp, lcp, cls, tbt, inp, speedIndex,
+          fcpScore, lcpScore, clsScore, tbtScore, speedIndexScore,
           performanceScore, accessibilityScore, bestPracticesScore, seoScore,
           jsSizeKb: Math.round(jsSize / 1024),
           cssSizeKb: Math.round(cssSize / 1024),

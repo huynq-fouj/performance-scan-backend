@@ -13,6 +13,12 @@ export class ScanResponseDto {
   inp?: number;
   speedIndex?: number;
 
+  fcpScore?: number;
+  lcpScore?: number;
+  clsScore?: number;
+  tbtScore?: number;
+  speedIndexScore?: number;
+
   // Asset metrics
   jsSizeKb?: number;
   cssSizeKb?: number;

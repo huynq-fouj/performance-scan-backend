@@ -66,6 +66,22 @@ export class Scan {
   @Prop()
   speedIndex?: number;
 
+  // Metric Scores (0-100)
+  @Prop()
+  fcpScore?: number;
+
+  @Prop()
+  lcpScore?: number;
+
+  @Prop()
+  clsScore?: number;
+
+  @Prop()
+  tbtScore?: number;
+
+  @Prop()
+  speedIndexScore?: number;
+
   // Asset metrics
   @Prop()
   jsSizeKb?: number;
