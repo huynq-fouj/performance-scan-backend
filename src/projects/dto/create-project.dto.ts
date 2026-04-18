@@ -1,4 +1,4 @@
-import { IsString, IsUrl, IsOptional, IsBoolean, IsIn, IsNotEmpty } from 'class-validator';
+import { IsString, IsUrl, IsOptional, IsBoolean, IsIn, IsNotEmpty, ValidateIf } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
@@ -12,6 +12,7 @@ export class CreateProjectDto {
   @IsOptional()
   description?: string;
 
+  @ValidateIf(o => o.logo !== '' && o.logo !== null && o.logo !== undefined)
   @IsUrl()
   @IsOptional()
   logo?: string;
