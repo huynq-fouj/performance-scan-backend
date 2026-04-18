@@ -35,12 +35,30 @@ export class Project {
   @Prop({ default: 'weekly' })
   autoScanFrequency: 'manual' | 'daily' | 'weekly' | 'monthly';
 
+  @Prop({ default: true })
+  includeSeo: boolean;
+
+  @Prop({ default: true })
+  includeAccessibility: boolean;
+
+  @Prop({ default: true })
+  includeBestPractices: boolean;
+
   // Last scan quick access
   @Prop()
   lastScanAt?: Date;
 
   @Prop()
   lastScore?: number;
+
+  @Prop()
+  lastAccessibilityScore?: number;
+
+  @Prop()
+  lastBestPracticesScore?: number;
+
+  @Prop()
+  lastSeoScore?: number;
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project);

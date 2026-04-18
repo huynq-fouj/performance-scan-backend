@@ -20,4 +20,16 @@ export class CreateProjectDto {
   @IsOptional()
   @IsIn(['manual', 'daily', 'weekly', 'monthly'])
   autoScanFrequency?: 'manual' | 'daily' | 'weekly' | 'monthly';
+
+  @IsBoolean()
+  @IsOptional()
+  includeSeo?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  includeAccessibility?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  includeBestPractices?: boolean;
 }

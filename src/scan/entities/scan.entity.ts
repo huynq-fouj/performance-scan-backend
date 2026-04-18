@@ -30,6 +30,15 @@ export class Scan {
   performanceScore?: number;
 
   @Prop()
+  accessibilityScore?: number;
+
+  @Prop()
+  bestPracticesScore?: number;
+
+  @Prop()
+  seoScore?: number;
+
+  @Prop()
   angularScore?: number;
 
   @Prop()
