@@ -220,4 +220,15 @@ export class ScanService {
       total,
     };
   }
+
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.scanModel.deleteOne({
+      _id: new Types.ObjectId(id),
+      userId: new Types.ObjectId(userId),
+    }).exec();
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Scan not found or access denied');
+    }
+  }
 }

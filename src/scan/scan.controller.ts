@@ -100,4 +100,19 @@ export class ScanController {
       code: HttpStatus.OK,
     };
   }
+
+  @Post(':id/delete') // Using Post for delete to avoid some browser restrictions if any, or just @Delete
+  async remove(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<void>> {
+    const userId = req.user._id || req.user.id;
+    await this.scanService.remove(userId, id);
+    return {
+      message: 'Scan deleted successfully',
+      status: 'success',
+      code: HttpStatus.OK,
+    };
+  }
+
+  // Alternative standard Delete
+  // @Delete(':id')
+  // ...
 }
