@@ -103,4 +103,28 @@ export class ScanService {
     }
     return this.mapToResponseDto(scan);
   }
+
+  async cancel(userId: string, id: string): Promise<ScanResponseDto> {
+    const scan = await this.scanModel.findOne({
+      _id: new Types.ObjectId(id),
+      userId: new Types.ObjectId(userId),
+    }).exec();
+
+    if (!scan) {
+      throw new NotFoundException('Scan not found or access denied');
+    }
+
+    if (scan.status === 'success' || scan.status === 'failed') {
+      return this.mapToResponseDto(scan); // Already finished
+    }
+
+    scan.status = 'failed';
+    scan.errorMessage = 'Manually cancelled by user';
+    scan.completedAt = new Date();
+    
+    const updated = await scan.save();
+
+    // Also update project to clear lastScanAt if needed, or leave it. We'll just return.
+    return this.mapToResponseDto(updated);
+  }
 }

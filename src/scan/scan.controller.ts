@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request, HttpStatus, Query } from '@nestjs/common';
 import { ScanService } from './scan.service';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -45,6 +45,18 @@ export class ScanController {
     const data = await this.scanService.findOne(userId, id);
     return {
       message: 'Scan details retrieved successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
+  }
+
+  @Patch(':id/cancel')
+  async cancel(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<ScanResponseDto>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.cancel(userId, id);
+    return {
+      message: 'Scan cancelled successfully',
       data,
       status: 'success',
       code: HttpStatus.OK,
