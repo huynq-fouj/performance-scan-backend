@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Project, ProjectDocument } from './entities/project.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProjectResponseDto } from './dto/project-response.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -11,19 +12,24 @@ export class ProjectsService {
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
   ) {}
 
-  async create(userId: string, createProjectDto: CreateProjectDto): Promise<ProjectDocument> {
+  async create(userId: string, createProjectDto: CreateProjectDto): Promise<ProjectResponseDto> {
     const newProject = new this.projectModel({
       ...createProjectDto,
       userId: new Types.ObjectId(userId),
     });
-    return newProject.save();
+    const saved = await newProject.save();
+    return this.mapToResponseDto(saved);
   }
 
-  async findAll(userId: string): Promise<ProjectDocument[]> {
-    return this.projectModel.find({ userId: new Types.ObjectId(userId) }).sort({ createdAt: -1 }).exec();
+  async findAll(userId: string): Promise<ProjectResponseDto[]> {
+    const projects = await this.projectModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .exec();
+    return projects.map(p => this.mapToResponseDto(p));
   }
 
-  async findOne(userId: string, id: string): Promise<ProjectDocument> {
+  async findOne(userId: string, id: string): Promise<ProjectResponseDto> {
     const project = await this.projectModel.findOne({
       _id: new Types.ObjectId(id),
       userId: new Types.ObjectId(userId),
@@ -32,10 +38,10 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found or access denied');
     }
-    return project;
+    return this.mapToResponseDto(project);
   }
 
-  async update(userId: string, id: string, updateProjectDto: UpdateProjectDto): Promise<ProjectDocument> {
+  async update(userId: string, id: string, updateProjectDto: UpdateProjectDto): Promise<ProjectResponseDto> {
     const project = await this.projectModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
       { $set: updateProjectDto },
@@ -45,7 +51,7 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found or access denied');
     }
-    return project;
+    return this.mapToResponseDto(project);
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -57,5 +63,21 @@ export class ProjectsService {
     if (result.deletedCount === 0) {
       throw new NotFoundException('Project not found or access denied');
     }
+  }
+
+  private mapToResponseDto(doc: ProjectDocument): ProjectResponseDto {
+    return {
+      id: doc._id.toString(),
+      name: doc.name,
+      url: doc.url,
+      description: doc.description,
+      logo: doc.logo,
+      isActive: doc.isActive,
+      autoScanFrequency: doc.autoScanFrequency,
+      lastScanAt: doc.lastScanAt,
+      lastScore: doc.lastScore,
+      createdAt: (doc as any).createdAt,
+      updatedAt: (doc as any).updatedAt,
+    };
   }
 }

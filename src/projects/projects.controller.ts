@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, 
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProjectResponseDto } from './dto/project-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiResponse } from '../common/interfaces/api-response.interface';
 
@@ -11,7 +12,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  async create(@Request() req: any, @Body() createProjectDto: CreateProjectDto): Promise<ApiResponse<any>> {
+  async create(@Request() req: any, @Body() createProjectDto: CreateProjectDto): Promise<ApiResponse<ProjectResponseDto>> {
     const userId = req.user._id || req.user.id;
     const data = await this.projectsService.create(userId, createProjectDto);
     return {
@@ -23,7 +24,7 @@ export class ProjectsController {
   }
 
   @Get()
-  async findAll(@Request() req: any): Promise<ApiResponse<any[]>> {
+  async findAll(@Request() req: any): Promise<ApiResponse<ProjectResponseDto[]>> {
     const userId = req.user._id || req.user.id;
     const data = await this.projectsService.findAll(userId);
     return {
@@ -35,7 +36,7 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  async findOne(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<any>> {
+  async findOne(@Request() req: any, @Param('id') id: string): Promise<ApiResponse<ProjectResponseDto>> {
     const userId = req.user._id || req.user.id;
     const data = await this.projectsService.findOne(userId, id);
     return {
@@ -47,7 +48,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  async update(@Request() req: any, @Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto): Promise<ApiResponse<any>> {
+  async update(@Request() req: any, @Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto): Promise<ApiResponse<ProjectResponseDto>> {
     const userId = req.user._id || req.user.id;
     const data = await this.projectsService.update(userId, id, updateProjectDto);
     return {
