@@ -52,10 +52,11 @@ export class ScanProcessor extends WorkerHost {
         output: 'json' as const,
         onlyCategories: categories,
         port: chrome.port,
+        preset: 'desktop', // Use desktop preset for emulation and scoring
       };
 
       try {
-        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse...`);
+        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (Desktop mode)...`);
         const runnerResult = await lighthouse(url, options);
         
         this.logger.log(`Lighthouse scan completed, killing chrome...`);
