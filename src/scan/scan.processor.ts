@@ -47,17 +47,43 @@ export class ScanProcessor extends WorkerHost {
       if (project.includeAccessibility) categories.push('accessibility');
       if (project.includeBestPractices) categories.push('best-practices');
 
-      const options = {
+      const { default: desktopConfig } = await import('lighthouse/core/config/desktop-config.js');
+
+      const flags = {
         logLevel: 'error' as const,
         output: 'json' as const,
         onlyCategories: categories,
         port: chrome.port,
-        preset: 'desktop', // Use desktop preset for emulation and scoring
+      };
+
+      const config = {
+        extends: 'lighthouse:default',
+        settings: {
+          ...desktopConfig.settings,
+          formFactor: 'desktop' as const,
+          screenEmulation: {
+            mobile: false,
+            width: 1350,
+            height: 940,
+            deviceScaleFactor: 1,
+            disabled: false,
+          },
+          emulatedUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+          throttlingMethod: 'simulate' as const,
+          throttling: {
+            rttMs: 40,
+            throughputKbps: 10240,
+            requestLatencyMs: 0,
+            downloadThroughputKbps: 0,
+            uploadThroughputKbps: 0,
+            cpuSlowdownMultiplier: 1,
+          },
+        }
       };
 
       try {
-        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (Desktop mode)...`);
-        const runnerResult = await lighthouse(url, options);
+        this.logger.log(`Chrome launched on port ${chrome.port}, running Lighthouse (TRUE Desktop mode)...`);
+        const runnerResult = await lighthouse(url, flags, config);
         
         this.logger.log(`Lighthouse scan completed, killing chrome...`);
         await chrome.kill();
