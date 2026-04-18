@@ -27,13 +27,23 @@ export class ScanController {
     @Request() req: any,
     @Param('projectId') projectId: string,
     @Query('status') status?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ): Promise<ApiResponse<ScanResponseDto[]>> {
     const userId = req.user._id || req.user.id;
-    const data = await this.scanService.findAllByProject(userId, projectId, status);
+    const { data, total } = await this.scanService.findAllByProject(userId, projectId, {
+      status,
+      page,
+      limit,
+      startDate,
+      endDate,
+    });
     return {
       message: 'Scans retrieved successfully',
       data,
-      count: data.length,
+      count: total,
       status: 'success',
       code: HttpStatus.OK,
     };

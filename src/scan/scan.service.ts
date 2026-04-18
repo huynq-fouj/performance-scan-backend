@@ -74,7 +74,12 @@ export class ScanService {
     return this.mapToResponseDto(saved);
   }
 
-  async findAllByProject(userId: string, projectId: string, status?: string): Promise<ScanResponseDto[]> {
+  async findAllByProject(
+    userId: string,
+    projectId: string,
+    query: { status?: string; startDate?: string; endDate?: string; page?: number; limit?: number },
+  ): Promise<{ data: ScanResponseDto[]; total: number }> {
+    const { status, startDate, endDate, page = 1, limit = 10 } = query;
     const filter: any = {
       projectId: new Types.ObjectId(projectId),
       userId: new Types.ObjectId(userId),
@@ -84,12 +89,32 @@ export class ScanService {
       filter.status = status;
     }
 
-    const scans = await this.scanModel
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .exec();
+    if (startDate || endDate) {
+      filter.startedAt = {};
+      if (startDate) filter.startedAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.startedAt.$lte = end;
+      }
+    }
 
-    return scans.map(scan => this.mapToResponseDto(scan));
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [scans, total] = await Promise.all([
+      this.scanModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .exec(),
+      this.scanModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: scans.map((scan) => this.mapToResponseDto(scan)),
+      total,
+    };
   }
 
   async findOne(userId: string, id: string): Promise<ScanResponseDto> {
