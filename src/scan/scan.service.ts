@@ -231,4 +231,85 @@ export class ScanService {
       throw new NotFoundException('Scan not found or access denied');
     }
   }
+
+  async importScan(userId: string, projectId: string, lhr: any): Promise<ScanResponseDto> {
+    // 1. Verify project
+    const project = await this.projectModel.findOne({
+      _id: new Types.ObjectId(projectId),
+      userId: new Types.ObjectId(userId),
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found or access denied');
+    }
+
+    // 2. Extract metrics from LHR
+    const metrics = this.parseLhr(lhr);
+
+    // 3. Create success scan
+    const newScan = new this.scanModel({
+      projectId: new Types.ObjectId(projectId),
+      userId: new Types.ObjectId(userId),
+      status: 'success',
+      device: lhr.configSettings?.formFactor || 'desktop',
+      ...metrics,
+      completedAt: new Date(lhr.fetchTime || new Date()),
+    });
+
+    const saved = await newScan.save();
+
+    // 4. Update Project last scan info
+    await this.projectModel.findByIdAndUpdate(projectId, {
+      lastScanAt: saved.completedAt,
+      lastScore: saved.performanceScore,
+      lastAccessibilityScore: saved.accessibilityScore,
+      lastBestPracticesScore: saved.bestPracticesScore,
+      lastSeoScore: saved.seoScore,
+      lastScreenshot: saved.screenshotUrl,
+    });
+
+    return this.mapToResponseDto(saved);
+  }
+
+  private parseLhr(lhr: any) {
+    const audits = lhr.audits || {};
+    const categories = lhr.categories || {};
+
+    const fcp = audits['first-contentful-paint']?.numericValue || 0;
+    const lcp = audits['largest-contentful-paint']?.numericValue || 0;
+    const cls = audits['cumulative-layout-shift']?.numericValue || 0;
+    const tbt = audits['total-blocking-time']?.numericValue || 0;
+    const inp = audits['interactive']?.numericValue || 0;
+    const speedIndex = audits['speed-index']?.numericValue || 0;
+
+    const fcpScore = Math.round((audits['first-contentful-paint']?.score || 0) * 100);
+    const lcpScore = Math.round((audits['largest-contentful-paint']?.score || 0) * 100);
+    const clsScore = Math.round((audits['cumulative-layout-shift']?.score || 0) * 100);
+    const tbtScore = Math.round((audits['total-blocking-time']?.score || 0) * 100);
+    const speedIndexScore = Math.round((audits['speed-index']?.score || 0) * 100);
+
+    const performanceScore = Math.round((categories.performance?.score || 0) * 100);
+    const accessibilityScore = categories.accessibility ? Math.round((categories.accessibility.score || 0) * 100) : undefined;
+    const bestPracticesScore = categories['best-practices'] ? Math.round((categories['best-practices'].score || 0) * 100) : undefined;
+    const seoScore = categories.seo ? Math.round((categories.seo.score || 0) * 100) : undefined;
+
+    // Network assets
+    const networkRequests = (audits['network-requests']?.details as any)?.items || [];
+    let jsSize = 0;
+    let cssSize = 0;
+    networkRequests.forEach((req: any) => {
+      if (req.resourceType === 'Script') jsSize += req.transferSize || 0;
+      else if (req.resourceType === 'Stylesheet') cssSize += req.transferSize || 0;
+    });
+
+    return {
+      fcp, lcp, cls, tbt, inp, speedIndex,
+      fcpScore, lcpScore, clsScore, tbtScore, speedIndexScore,
+      performanceScore, accessibilityScore, bestPracticesScore, seoScore,
+      jsSizeKb: Math.round(jsSize / 1024),
+      cssSizeKb: Math.round(cssSize / 1024),
+      requestCount: networkRequests.length,
+      screenshotUrl: audits['final-screenshot']?.details?.data,
+    };
+  }
 }

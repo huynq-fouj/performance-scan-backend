@@ -112,6 +112,22 @@ export class ScanController {
     };
   }
 
+  @Post('project/:projectId/import')
+  async import(
+    @Request() req: any,
+    @Param('projectId') projectId: string,
+    @Body() lhr: any,
+  ): Promise<ApiResponse<ScanResponseDto>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.importScan(userId, projectId, lhr);
+    return {
+      message: 'Lighthouse report imported successfully',
+      data,
+      status: 'success',
+      code: HttpStatus.CREATED,
+    };
+  }
+
   // Alternative standard Delete
   // @Delete(':id')
   // ...
