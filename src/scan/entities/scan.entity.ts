@@ -17,6 +17,11 @@ export interface ScanRecommendation {
   priority: 'High' | 'Medium' | 'Low';
 }
 
+export interface ThirdPartyDomain {
+  domain: string;
+  transferSizeKb: number;
+}
+
 @Schema({ timestamps: true })
 export class Scan {
   @Prop({
@@ -104,7 +109,19 @@ export class Scan {
   cssSizeKb?: number;
 
   @Prop()
+  imageSizeKb?: number;
+
+  @Prop()
+  fontSizeKb?: number;
+
+  @Prop()
+  otherSizeKb?: number;
+
+  @Prop()
   requestCount?: number;
+
+  @Prop({ type: Array, default: [] })
+  thirdPartyDomains?: ThirdPartyDomain[];
 
   // Screenshot
   @Prop()

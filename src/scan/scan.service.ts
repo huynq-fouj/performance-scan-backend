@@ -38,7 +38,11 @@ export class ScanService {
       speedIndexScore: obj.speedIndexScore,
       jsSizeKb: obj.jsSizeKb,
       cssSizeKb: obj.cssSizeKb,
+      imageSizeKb: obj.imageSizeKb,
+      fontSizeKb: obj.fontSizeKb,
+      otherSizeKb: obj.otherSizeKb,
       requestCount: obj.requestCount,
+      thirdPartyDomains: obj.thirdPartyDomains || [],
       screenshotUrl: obj.screenshotUrl,
       issues: obj.issues || [],
       recommendations: obj.recommendations || [],
@@ -304,10 +308,34 @@ export class ScanService {
     const networkRequests = (audits['network-requests']?.details as any)?.items || [];
     let jsSize = 0;
     let cssSize = 0;
+    let imageSize = 0;
+    let fontSize = 0;
+    let otherSize = 0;
+    
+    // For third-party domains
+    const mainDomain = audits['network-requests']?.details?.items?.length ? new URL(audits['network-requests'].details.items[0].url).hostname : '';
+    const domainMap: Record<string, number> = {};
+
     networkRequests.forEach((req: any) => {
-      if (req.resourceType === 'Script') jsSize += req.transferSize || 0;
-      else if (req.resourceType === 'Stylesheet') cssSize += req.transferSize || 0;
+      const size = req.transferSize || 0;
+      if (req.resourceType === 'Script') jsSize += size;
+      else if (req.resourceType === 'Stylesheet') cssSize += size;
+      else if (req.resourceType === 'Image') imageSize += size;
+      else if (req.resourceType === 'Font') fontSize += size;
+      else otherSize += size;
+
+      try {
+        const hostname = new URL(req.url).hostname;
+        if (hostname && mainDomain && hostname !== mainDomain) {
+          domainMap[hostname] = (domainMap[hostname] || 0) + size;
+        }
+      } catch (e) {}
     });
+
+    const thirdPartyDomains = Object.keys(domainMap)
+      .map(domain => ({ domain, transferSizeKb: Math.round(domainMap[domain] / 1024) }))
+      .sort((a, b) => b.transferSizeKb - a.transferSizeKb)
+      .slice(0, 10); // Top 10
 
     return {
       fcp, lcp, cls, tbt, inp, speedIndex,
@@ -315,7 +343,11 @@ export class ScanService {
       performanceScore, accessibilityScore, bestPracticesScore, seoScore,
       jsSizeKb: Math.round(jsSize / 1024),
       cssSizeKb: Math.round(cssSize / 1024),
+      imageSizeKb: Math.round(imageSize / 1024),
+      fontSizeKb: Math.round(fontSize / 1024),
+      otherSizeKb: Math.round(otherSize / 1024),
       requestCount: networkRequests.length,
+      thirdPartyDomains,
       screenshotUrl: audits['final-screenshot']?.details?.data,
     };
   }

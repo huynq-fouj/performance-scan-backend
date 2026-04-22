@@ -1,4 +1,4 @@
-import { ScanIssue, ScanRecommendation } from '../entities/scan.entity';
+import { ScanIssue, ScanRecommendation, ThirdPartyDomain } from '../entities/scan.entity';
 
 export class ScanResponseDto {
   id: string;
@@ -24,7 +24,11 @@ export class ScanResponseDto {
   // Asset metrics
   jsSizeKb?: number;
   cssSizeKb?: number;
+  imageSizeKb?: number;
+  fontSizeKb?: number;
+  otherSizeKb?: number;
   requestCount?: number;
+  thirdPartyDomains?: ThirdPartyDomain[];
 
   screenshotUrl?: string;
   issues?: ScanIssue[];

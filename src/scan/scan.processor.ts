@@ -152,17 +152,37 @@ export class ScanProcessor extends WorkerHost {
         const bestPracticesScore = lhr.categories['best-practices'] ? Math.round((lhr.categories['best-practices'].score || 0) * 100) : undefined;
         const seoScore = lhr.categories.seo ? Math.round((lhr.categories.seo.score || 0) * 100) : undefined;
 
-        // JS / CSS sizes approximation
         const networkRequests = (lhr.audits['network-requests']?.details as any)?.items || [];
         let jsSize = 0;
         let cssSize = 0;
+        let imageSize = 0;
+        let fontSize = 0;
+        let otherSize = 0;
+        
+        // For third-party domains
+        const mainDomain = networkRequests.length ? new URL(networkRequests[0].url).hostname : '';
+        const domainMap: Record<string, number> = {};
+
         networkRequests.forEach((req: any) => {
-          if (req.resourceType === 'Script') {
-            jsSize += req.transferSize || 0;
-          } else if (req.resourceType === 'Stylesheet') {
-            cssSize += req.transferSize || 0;
-          }
+          const size = req.transferSize || 0;
+          if (req.resourceType === 'Script') jsSize += size;
+          else if (req.resourceType === 'Stylesheet') cssSize += size;
+          else if (req.resourceType === 'Image') imageSize += size;
+          else if (req.resourceType === 'Font') fontSize += size;
+          else otherSize += size;
+
+          try {
+            const hostname = new URL(req.url).hostname;
+            if (hostname && mainDomain && hostname !== mainDomain) {
+              domainMap[hostname] = (domainMap[hostname] || 0) + size;
+            }
+          } catch (e) {}
         });
+
+        const thirdPartyDomains = Object.keys(domainMap)
+          .map(domain => ({ domain, transferSizeKb: Math.round(domainMap[domain] / 1024) }))
+          .sort((a, b) => b.transferSizeKb - a.transferSizeKb)
+          .slice(0, 10); // Top 10
 
         const requestCount = networkRequests.length;
         const screenshot = (lhr.audits['final-screenshot']?.details as any)?.data;
@@ -173,7 +193,11 @@ export class ScanProcessor extends WorkerHost {
           performanceScore, accessibilityScore, bestPracticesScore, seoScore,
           jsSizeKb: Math.round(jsSize / 1024),
           cssSizeKb: Math.round(cssSize / 1024),
+          imageSizeKb: Math.round(imageSize / 1024),
+          fontSizeKb: Math.round(fontSize / 1024),
+          otherSizeKb: Math.round(otherSize / 1024),
           requestCount,
+          thirdPartyDomains,
           screenshotUrl: screenshot,
         };
 
