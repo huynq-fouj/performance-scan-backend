@@ -7,7 +7,7 @@ import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
-import { buildInsights } from './utils/rules.util';
+import { buildInsights, buildAngularInsights } from './utils/rules.util';
 
 @Injectable()
 export class ScanService {
@@ -43,6 +43,7 @@ export class ScanService {
       otherSizeKb: obj.otherSizeKb,
       requestCount: obj.requestCount,
       thirdPartyDomains: obj.thirdPartyDomains || [],
+      angularInsights: obj.angularInsights,
       screenshotUrl: obj.screenshotUrl,
       issues: obj.issues || [],
       recommendations: obj.recommendations || [],
@@ -348,6 +349,7 @@ export class ScanService {
       otherSizeKb: Math.round(otherSize / 1024),
       requestCount: networkRequests.length,
       thirdPartyDomains,
+      angularInsights: buildAngularInsights(lhr, networkRequests),
       screenshotUrl: audits['final-screenshot']?.details?.data,
     };
   }

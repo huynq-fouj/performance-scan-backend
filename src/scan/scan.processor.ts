@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { Logger } from '@nestjs/common';
-import { buildInsights } from './utils/rules.util';
+import { buildInsights, buildAngularInsights } from './utils/rules.util';
 
 @Processor('lighthouse-scan')
 export class ScanProcessor extends WorkerHost {
@@ -198,6 +198,7 @@ export class ScanProcessor extends WorkerHost {
           otherSizeKb: Math.round(otherSize / 1024),
           requestCount,
           thirdPartyDomains,
+          angularInsights: buildAngularInsights(lhr, networkRequests),
           screenshotUrl: screenshot,
         };
 

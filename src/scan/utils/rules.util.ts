@@ -1,4 +1,4 @@
-import { ScanIssue, ScanRecommendation } from '../entities/scan.entity';
+import { ScanIssue, ScanRecommendation, AngularInsights } from '../entities/scan.entity';
 
 export function buildInsights(metrics: any): { issues: ScanIssue[], recommendations: ScanRecommendation[] } {
   const issues: ScanIssue[] = [];
@@ -101,4 +101,78 @@ export function buildInsights(metrics: any): { issues: ScanIssue[], recommendati
   issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
   return { issues, recommendations };
+}
+
+export function buildAngularInsights(lhr: any, networkRequests: any[]): AngularInsights {
+  const insights: AngularInsights = {
+    isAngular: false,
+  };
+
+  if (!lhr) return insights;
+
+  // 1. Detect Angular Runtime & Version
+  const jsLibraries = lhr.audits?.['js-libraries']?.details?.items || [];
+  const angularObj = jsLibraries.find((lib: any) => lib.name === 'Angular');
+  
+  if (angularObj) {
+    insights.isAngular = true;
+    insights.version = angularObj.version || 'Unknown';
+  } else {
+    // Fallback: check scripts for polyfills/main
+    const hasPolyfills = networkRequests.some(r => r.url.includes('polyfills'));
+    const hasMain = networkRequests.some(r => r.url.includes('main'));
+    if (hasPolyfills && hasMain) {
+      // Possible Angular CSR, but we shouldn't assume it 100%. Let's look for zone.js in polyfills or just rely on lighthouse.
+      // Lighthouse wappalyzer is usually very accurate.
+    }
+  }
+
+  if (!insights.isAngular) return insights;
+
+  // Gather stats
+  const scriptRequests = networkRequests.filter(r => r.resourceType === 'Script' || r.url.endsWith('.js'));
+  const totalJsSize = scriptRequests.reduce((acc, r) => acc + (r.transferSize || 0), 0);
+  
+  // 2. Zone.js Present
+  // Wappalyzer might list Zone.js separately
+  const zoneObj = jsLibraries.find((lib: any) => lib.name.toLowerCase().includes('zone.js'));
+  if (zoneObj) {
+    insights.zoneJsPresent = true;
+  } else {
+    // Check if version is < 18, it likely has zone.js. If it has no version, maybe true.
+    if (insights.version && insights.version.match(/^(1[0-7]|[0-9])\./)) {
+      insights.zoneJsPresent = true;
+    } else {
+      // Angular >= 18 might be zoneless, default to false or check strictly. We'll default to true unless we know.
+      insights.zoneJsPresent = true; 
+    }
+  }
+
+  // 3. SSR Enabled
+  // If main document transferSize < 15KB and JS size is massive, likely no SSR.
+  const docRequest = networkRequests.find(r => r.resourceType === 'Document');
+  if (docRequest && docRequest.transferSize < 15000 && totalJsSize > 250000) {
+    insights.ssrEnabled = false;
+  } else if (docRequest && docRequest.transferSize > 30000) {
+    insights.ssrEnabled = true; // Substantial HTML implies SSR
+  }
+
+  // 4. Heavy Vendor
+  const heaviestScript = Math.max(...scriptRequests.map(r => r.transferSize || 0));
+  if (heaviestScript > 500000) { // > 500KB
+    insights.heavyVendor = true;
+  } else {
+    insights.heavyVendor = false;
+  }
+
+  // 5. Lazy Routes Suspicion
+  // If there are very few scripts but the bundle is large, they aren't using lazy loaded chunks.
+  if (scriptRequests.length <= 4 && totalJsSize > 500000) {
+    insights.hasLazyRoutes = false;
+  } else if (scriptRequests.length > 5) {
+    // If they have chunk-*.js or multiple hashes.
+    insights.hasLazyRoutes = true;
+  }
+
+  return insights;
 }

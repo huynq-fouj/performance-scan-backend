@@ -1,4 +1,4 @@
-import { ScanIssue, ScanRecommendation, ThirdPartyDomain } from '../entities/scan.entity';
+import { ScanIssue, ScanRecommendation, ThirdPartyDomain, AngularInsights } from '../entities/scan.entity';
 
 export class ScanResponseDto {
   id: string;
@@ -29,6 +29,8 @@ export class ScanResponseDto {
   otherSizeKb?: number;
   requestCount?: number;
   thirdPartyDomains?: ThirdPartyDomain[];
+
+  angularInsights?: AngularInsights;
 
   screenshotUrl?: string;
   issues?: ScanIssue[];

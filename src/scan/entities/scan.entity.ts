@@ -22,6 +22,15 @@ export interface ThirdPartyDomain {
   transferSizeKb: number;
 }
 
+export interface AngularInsights {
+  isAngular: boolean;
+  version?: string;
+  hasLazyRoutes?: boolean;
+  heavyVendor?: boolean;
+  ssrEnabled?: boolean;
+  zoneJsPresent?: boolean;
+}
+
 @Schema({ timestamps: true })
 export class Scan {
   @Prop({
@@ -122,6 +131,9 @@ export class Scan {
 
   @Prop({ type: Array, default: [] })
   thirdPartyDomains?: ThirdPartyDomain[];
+
+  @Prop({ type: Object })
+  angularInsights?: AngularInsights;
 
   // Screenshot
   @Prop()
