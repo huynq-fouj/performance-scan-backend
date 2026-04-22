@@ -7,6 +7,7 @@ import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
+import { buildInsights } from './utils/rules.util';
 
 @Injectable()
 export class ScanService {
@@ -39,6 +40,7 @@ export class ScanService {
       cssSizeKb: obj.cssSizeKb,
       requestCount: obj.requestCount,
       screenshotUrl: obj.screenshotUrl,
+      issues: obj.issues || [],
       recommendations: obj.recommendations || [],
       errorMessage: obj.errorMessage,
       startedAt: obj.startedAt,
@@ -246,6 +248,9 @@ export class ScanService {
     // 2. Extract metrics from LHR
     const metrics = this.parseLhr(lhr);
 
+    // 2.5 Build insights
+    const { issues, recommendations } = buildInsights(metrics);
+
     // 3. Create success scan
     const newScan = new this.scanModel({
       projectId: new Types.ObjectId(projectId),
@@ -253,6 +258,8 @@ export class ScanService {
       status: 'success',
       device: lhr.configSettings?.formFactor || 'desktop',
       ...metrics,
+      issues,
+      recommendations,
       completedAt: new Date(lhr.fetchTime || new Date()),
     });
 

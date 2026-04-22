@@ -1,3 +1,5 @@
+import { ScanIssue, ScanRecommendation } from '../entities/scan.entity';
+
 export class ScanResponseDto {
   id: string;
   projectId: string;
@@ -25,7 +27,8 @@ export class ScanResponseDto {
   requestCount?: number;
 
   screenshotUrl?: string;
-  recommendations: string[];
+  issues?: ScanIssue[];
+  recommendations: ScanRecommendation[];
   errorMessage?: string;
 
   // Populated project info (for global scans list)

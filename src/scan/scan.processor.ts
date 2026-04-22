@@ -5,6 +5,7 @@ import { Model } from 'mongoose';
 import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { Logger } from '@nestjs/common';
+import { buildInsights } from './utils/rules.util';
 
 @Processor('lighthouse-scan')
 export class ScanProcessor extends WorkerHost {
@@ -166,16 +167,25 @@ export class ScanProcessor extends WorkerHost {
         const requestCount = networkRequests.length;
         const screenshot = (lhr.audits['final-screenshot']?.details as any)?.data;
 
-        // Update Scan
-        const completedAt = new Date();
-        await this.scanModel.findByIdAndUpdate(scanId, {
-          status: 'success',
+        const metrics = {
           fcp, lcp, cls, tbt, inp, speedIndex,
           fcpScore, lcpScore, clsScore, tbtScore, speedIndexScore,
           performanceScore, accessibilityScore, bestPracticesScore, seoScore,
           jsSizeKb: Math.round(jsSize / 1024),
           cssSizeKb: Math.round(cssSize / 1024),
           requestCount,
+          screenshotUrl: screenshot,
+        };
+
+        const { issues, recommendations } = buildInsights(metrics);
+
+        // Update Scan
+        const completedAt = new Date();
+        await this.scanModel.findByIdAndUpdate(scanId, {
+          status: 'success',
+          ...metrics,
+          issues,
+          recommendations,
           completedAt,
         });
 

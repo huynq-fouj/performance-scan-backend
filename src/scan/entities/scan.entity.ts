@@ -3,6 +3,20 @@ import { Document, Types } from 'mongoose';
 
 export type ScanDocument = Scan & Document;
 
+export interface ScanIssue {
+  title: string;
+  description: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  metric?: string;
+  impact?: string;
+}
+
+export interface ScanRecommendation {
+  title: string;
+  expectedGain?: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
+
 @Schema({ timestamps: true })
 export class Scan {
   @Prop({
@@ -96,9 +110,13 @@ export class Scan {
   @Prop()
   screenshotUrl?: string;
 
+  // Issues found
+  @Prop({ type: Array, default: [] })
+  issues: ScanIssue[];
+
   // Recommendations
-  @Prop({ type: [String], default: [] })
-  recommendations: string[];
+  @Prop({ type: Array, default: [] })
+  recommendations: ScanRecommendation[];
 
   // Error
   @Prop()
