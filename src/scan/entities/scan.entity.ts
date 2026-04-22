@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type ScanDocument = Scan & Document;
+export type ScanDocument = Scan & Document & { createdAt: Date; updatedAt: Date };
 
 export interface ScanIssue {
   title: string;

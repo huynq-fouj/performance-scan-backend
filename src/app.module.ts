@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ScanModule } from './scan/scan.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
     UsersModule,
     ProjectsModule,
     ScanModule,
+    DashboardModule,
     SubscriptionModule,
   ],
   controllers: [AppController],
