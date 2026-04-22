@@ -4,6 +4,7 @@ import { CreateScanDto } from './dto/create-scan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiResponse } from '../common/interfaces/api-response.interface';
 import { ScanResponseDto } from './dto/scan-response.dto';
+import { ScanCompareResponseDto } from './dto/compare-response.dto';
 
 @Controller('scans')
 @UseGuards(JwtAuthGuard)
@@ -72,6 +73,22 @@ export class ScanController {
       message: 'Scans retrieved successfully',
       data,
       count: total,
+      status: 'success',
+      code: HttpStatus.OK,
+    };
+  }
+
+  @Get('compare/:scanAId/:scanBId')
+  async compareScans(
+    @Request() req: any, 
+    @Param('scanAId') scanAId: string,
+    @Param('scanBId') scanBId: string
+  ): Promise<ApiResponse<ScanCompareResponseDto>> {
+    const userId = req.user._id || req.user.id;
+    const data = await this.scanService.compareScans(userId, scanAId, scanBId);
+    return {
+      message: 'Scans compared successfully',
+      data,
       status: 'success',
       code: HttpStatus.OK,
     };

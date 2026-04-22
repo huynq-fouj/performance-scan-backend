@@ -7,6 +7,7 @@ import { Scan, ScanDocument } from './entities/scan.entity';
 import { Project, ProjectDocument } from '../projects/entities/project.entity';
 import { CreateScanDto } from './dto/create-scan.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
+import { ScanCompareResponseDto } from './dto/compare-response.dto';
 import { buildInsights, buildAngularInsights } from './utils/rules.util';
 
 @Injectable()
@@ -142,6 +143,49 @@ export class ScanService {
       throw new NotFoundException('Scan not found or access denied');
     }
     return this.mapToResponseDto(scan);
+  }
+
+  async compareScans(userId: string, scanAId: string, scanBId: string): Promise<ScanCompareResponseDto> {
+    const scanA = await this.findOne(userId, scanAId);
+    const scanB = await this.findOne(userId, scanBId);
+
+    const calculateDelta = (a = 0, b = 0, invert = false) => {
+      const diff = b - a;
+      const percent = a !== 0 ? (diff / a) * 100 : 0;
+      // For score, higher is better (invert=true). For metrics like LCP, lower is better.
+      const isBetter = invert ? diff >= 0 : diff <= 0;
+      return { diff, percent, isBetter };
+    };
+
+    const deltas = {
+      performanceScore: calculateDelta(scanA.performanceScore, scanB.performanceScore, true),
+      lcp: calculateDelta(scanA.lcp, scanB.lcp),
+      cls: calculateDelta(scanA.cls, scanB.cls),
+      tbt: calculateDelta(scanA.tbt, scanB.tbt),
+      jsSizeKb: calculateDelta(scanA.jsSizeKb, scanB.jsSizeKb),
+      cssSizeKb: calculateDelta(scanA.cssSizeKb, scanB.cssSizeKb),
+      requestCount: calculateDelta(scanA.requestCount, scanB.requestCount),
+    };
+
+    let summary = 'No significant changes detected.';
+    const scoreDiff = deltas.performanceScore.diff;
+    const jsSizeDiff = deltas.jsSizeKb.diff;
+
+    if (scoreDiff > 0) {
+      summary = `Performance improved by ${scoreDiff} points! `;
+      if (jsSizeDiff < 0) {
+        summary += `The javascript payload was successfully reduced by ${Math.abs(jsSizeDiff)} KB.`;
+      }
+    } else if (scoreDiff < 0) {
+      summary = `Performance degraded by ${Math.abs(scoreDiff)} points. Please review the delta metrics.`;
+    }
+
+    return {
+      scanA,
+      scanB,
+      deltas,
+      summary,
+    };
   }
 
   async cancel(userId: string, id: string): Promise<ScanResponseDto> {
