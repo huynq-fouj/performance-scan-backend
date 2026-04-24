@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { DashboardSummaryDto, ProjectHealthItem, DashboardAlert, ActivityLog, TrendDataPoint } from './dto/dashboard-response.dto';
+import { DashboardSummaryDto, ProjectHealthItem, DashboardAlert, ActivityLog, TrendDataPoint, ExecutiveReportDto, AggregatedIssue } from './dto/dashboard-response.dto';
 import { ProjectDocument } from '../projects/entities/project.entity';
 import { ScanDocument } from '../scan/entities/scan.entity';
 import { formatDistanceToNow } from 'date-fns';
@@ -185,6 +185,112 @@ export class DashboardService {
       alerts: alerts.slice(0, 10), // Limit total alerts
       recentActivity,
       trends
+    };
+  }
+
+  async getExecutiveReport(userId: string, filters?: { device?: string, days?: number }): Promise<ExecutiveReportDto> {
+    const userObjId = new Types.ObjectId(userId);
+    
+    // Determine date filter
+    const matchStage: any = { userId: userObjId, status: 'success' };
+    if (filters?.days) {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - filters.days);
+      matchStage.createdAt = { $gte: startDate };
+    }
+    if (filters?.device && filters.device !== 'all') {
+      matchStage.device = filters.device;
+    }
+
+    // Get all matching successful scans
+    const scans = await this.scanModel.find(matchStage)
+      .sort({ createdAt: -1 })
+      .populate<{ projectId: ProjectDocument }>('projectId', 'name')
+      .exec();
+
+    // Get latest scan per project
+    const latestScansMap = new Map<string, any>();
+    scans.forEach(scan => {
+      const pid = scan.projectId?._id?.toString() || (scan.projectId as any)?.toString();
+      if (pid && !latestScansMap.has(pid)) {
+        latestScansMap.set(pid, scan);
+      }
+    });
+
+    const latestScans = Array.from(latestScansMap.values());
+    const totalScans = latestScans.length;
+
+    // 1. Average Score & Distribution
+    let sumScore = 0;
+    let good = 0, average = 0, poor = 0;
+
+    latestScans.forEach(s => {
+      const score = s.performanceScore || 0;
+      sumScore += score;
+      if (score >= 90) good++;
+      else if (score >= 50) average++;
+      else poor++;
+    });
+
+    const averageScore = totalScans > 0 ? Math.round(sumScore / totalScans) : 0;
+    const healthDistribution = {
+      good: { count: good, percent: totalScans > 0 ? Math.round((good / totalScans) * 100) : 0 },
+      average: { count: average, percent: totalScans > 0 ? Math.round((average / totalScans) * 100) : 0 },
+      poor: { count: poor, percent: totalScans > 0 ? Math.round((poor / totalScans) * 100) : 0 },
+    };
+
+    // 2. Common Issues
+    const issueMap = new Map<string, AggregatedIssue>();
+    latestScans.forEach((scan: any) => {
+      if (scan.issues && Array.isArray(scan.issues)) {
+        scan.issues
+          .filter((i: any) => i.severity === 'critical' || i.severity === 'high')
+          .forEach((issue: any) => {
+            const key = issue.title;
+            const projName = scan.projectId?.name || 'Unknown Project';
+            
+            if (issueMap.has(key)) {
+              const existing = issueMap.get(key);
+              if (existing) {
+                existing.count++;
+                if (!existing.affectedProjects.includes(projName)) {
+                  existing.affectedProjects.push(projName);
+                }
+              }
+            } else {
+              issueMap.set(key, {
+                title: issue.title,
+                count: 1,
+                severity: issue.severity,
+                affectedProjects: [projName]
+              });
+            }
+          });
+      }
+    });
+
+    const commonIssues = Array.from(issueMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // 3. Leaderboard
+    const sortedByScoreDesc = [...latestScans].sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0));
+    const sortedByScoreAsc = [...latestScans].sort((a, b) => (a.performanceScore || 100) - (b.performanceScore || 100));
+
+    const mapToLeaderboardItem = (s: any) => ({
+      id: s._id.toString(),
+      projectId: s.projectId?._id?.toString(),
+      projectName: s.projectId?.name || 'Unknown',
+      performanceScore: s.performanceScore
+    });
+
+    return {
+      averageScore,
+      healthDistribution,
+      commonIssues,
+      topPerformers: sortedByScoreDesc.slice(0, 3).map(mapToLeaderboardItem),
+      needsAttention: sortedByScoreAsc.slice(0, 3).map(mapToLeaderboardItem),
+      totalScansAnalyzed: totalScans
     };
   }
 }
